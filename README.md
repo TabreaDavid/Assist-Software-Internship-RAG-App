@@ -1,1 +1,0 @@
-# Assist-Software-Internship-RAG-App
