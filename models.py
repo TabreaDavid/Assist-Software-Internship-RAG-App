@@ -17,9 +17,9 @@ class Collection(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String)
     owner_id = Column(Integer, ForeignKey("users.id"))
-    created_at = Column(DateTime, default=datetime.utcnow)
     owner = relationship("User", back_populates="collections")
     documents = relationship("Document", back_populates="collection")
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 class Document(Base):
     __tablename__ = 'documents'
@@ -27,9 +27,9 @@ class Document(Base):
     file_name = Column(String)
     file_type = Column(String)
     content = Column(String)
-    uploaded_at = Column(DateTime, default=datetime.utcnow)
     collection_id = Column(Integer, ForeignKey("collections.id"))
     collection = relationship("Collection", back_populates="documents")
+    uploaded_at = Column(DateTime, default=datetime.utcnow)
 
 class ChatHistory(Base):
     __tablename__ = 'chat_history'

@@ -14,14 +14,16 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 security = HTTPBearer()
 pwd_context = CryptContext(schemes=["bcrypt"])
 
+
 def hash_password(password: str):
     return pwd_context.hash(password)
+
 
 def verify_password(hashed_password: str, password: str):
     return pwd_context.verify(password, hashed_password)
 
-def create_access_token(username: str, id: int):
 
+def create_access_token(username: str, id: int):
     payload = {
         "user_id": id,
         "username": username,
@@ -29,6 +31,7 @@ def create_access_token(username: str, id: int):
     }
 
     return jwt.encode(payload, SECRET_KEY, algorithm="HS256")
+
 
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
     try:
@@ -41,4 +44,3 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
     except Exception as e:
         print(f"Token validation error: {e}")
         raise HTTPException(status_code=401, detail="Invalid token")
-        
