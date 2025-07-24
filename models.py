@@ -35,11 +35,23 @@ class ChatHistory(Base):
     __tablename__ = 'chat_history'
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"))
-    question = Column(String)
-    answer = Column(String)
+    query = Column(String)
+    response = Column(String)
+    collection_id = Column(Integer, ForeignKey("collections.id"))
     submitted_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class IndexedCollection(Base):
+    __tablename__ = 'indexed_collections'
+    
+    collection_id = Column(Integer, ForeignKey("collections.id"), primary_key=True)
+    chroma_collection_name = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    collection = relationship("Collection")
 
 #TODO
 class AdminSettings(Base):
     __tablename__ = 'admin_settings'
     id = Column(Integer, primary_key=True)
+
