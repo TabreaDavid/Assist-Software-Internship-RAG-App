@@ -15,3 +15,8 @@ class CollectionCreate(BaseModel):
 class Query(BaseModel):
     query: str
     collection_id: int
+    custom_context: str = None
+
+class ModelChange(BaseModel):
+    admin_password: str
+    model_name: str

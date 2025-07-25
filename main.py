@@ -9,15 +9,23 @@ import os
 from file_processing import *
 from rag_functionality import *
 from database import DB_Session
+from datetime import datetime
+from rag_functionality import get_current_model
+
 
 load_dotenv()
-
 app = FastAPI()
 create_tables()
+
 
 db = DB_Session()
 try:
     load_indexed_collections(db)
+    existing_model_setting = db.query(AdminSettings).filter(AdminSettings.setting_key == "openai_model").first()
+    if not existing_model_setting:
+        default_model = AdminSettings(setting_key="openai_model",setting_value=os.getenv("OPENAI_MODEL"))
+        db.add(default_model)
+        db.commit()
 finally:
     db.close()
 
@@ -179,7 +187,7 @@ def simple_query(query_data: Query, current_user: User = Depends(get_current_use
         raise HTTPException(status_code=404, detail="Collection not found")
     return {
         "query": query_data.query,
-        "response": query_collection_index(query_data.query, query_data.collection_id)
+        "response": query_collection_index(query_data.query, query_data.collection_id, db, custom_context=query_data.custom_context)
     }
 
 @app.post("/query/chat")
@@ -198,22 +206,47 @@ def chat_query(query_data: Query, current_user: User = Depends(get_current_user)
         context_messages.append(f"Human: {chat.query}")
         context_messages.append(f"Assistant: {chat.response}")
     
-    rag_response = query_collection_index(query_data.query, query_data.collection_id, context=context_messages)
+    rag_response = query_collection_index(query_data.query, query_data.collection_id, db, context=context_messages)
     
     chat_record = ChatHistory(
         query=query_data.query,
         response=rag_response,
         collection_id=query_data.collection_id,
-        user_id=current_user.id
-    )
+        user_id=current_user.id)
+    
     db.add(chat_record)
     db.commit()
-    
+            
     return {
         "query": query_data.query,
         "response": rag_response
     }
     
+@app.post("/admin-settings/change-model")
+def change_model(model_data: ModelChange, db: Session = Depends(get_db)):
+    admin_password = os.getenv("ADMIN_PASSWORD")
+    
+    if not admin_password or model_data.admin_password != admin_password:
+        raise HTTPException(status_code=401, detail="Invalid admin password")
+    
+    existing_setting = db.query(AdminSettings).filter(AdminSettings.setting_key == "openai_model").first()
+    
+    if existing_setting:
+        existing_setting.setting_value = model_data.model_name
+        existing_setting.updated_at = datetime.utcnow()
+    else:
+        new_setting = AdminSettings(setting_key="openai_model", setting_value=model_data.model_name)
+        db.add(new_setting)
+    
+    db.commit()
+    
+    return {"message": f"Model changed to {model_data.model_name} successfully"}
+
+@app.get("/admin-settings/current-model")
+def get_current_model_setting(db: Session = Depends(get_db)):
+    current_model = get_current_model(db)
+    return {"current_model": current_model}
+
 @app.get("/")
 def root():
     return {"App": "Is running"}

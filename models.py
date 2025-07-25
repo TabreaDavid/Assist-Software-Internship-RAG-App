@@ -50,8 +50,10 @@ class IndexedCollection(Base):
     
     collection = relationship("Collection")
 
-#TODO
 class AdminSettings(Base):
     __tablename__ = 'admin_settings'
     id = Column(Integer, primary_key=True)
+    setting_key = Column(String, unique=True)
+    setting_value = Column(String)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
