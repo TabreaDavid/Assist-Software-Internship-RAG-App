@@ -56,4 +56,3 @@ class AdminSettings(Base):
     setting_key = Column(String, unique=True)
     setting_value = Column(String)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-

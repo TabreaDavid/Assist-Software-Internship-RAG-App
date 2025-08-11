@@ -9,11 +9,11 @@ from dotenv import load_dotenv
 from datetime import datetime, timedelta, timezone
 import os
 
-
 load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY")
 security = HTTPBearer()
 pwd_context = CryptContext(schemes=["bcrypt"])
+
 def hash_password(password: str):
     return pwd_context.hash(password)
 
