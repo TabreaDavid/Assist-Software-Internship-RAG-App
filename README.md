@@ -11,8 +11,6 @@ A Retrieval-Augmented Generation web application that provides a Q&A system. Bui
 - Settings management
 
 ## Tech Stack:
-
-### Backend
 - **FastAPI**, **SQLAlchemy**, **PostgreSQL**, **ChromaDB**, **LlamaIndex**, **OpenAI**, **HuggingFace**, **Streamlit**
 
 ## How to use
