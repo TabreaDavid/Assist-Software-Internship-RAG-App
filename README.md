@@ -36,6 +36,7 @@ A Retrieval-Augmented Generation web application that provides a Q&A system. Bui
    ```
 
 4. **Environment setup**
+   
    Create a `.env` file in the root directory:
    ```env
    OPENAI_API_KEY= your open ai key
@@ -46,13 +47,13 @@ A Retrieval-Augmented Generation web application that provides a Q&A system. Bui
    DATABASE_URL = your database url
    ```
 
-5. **Start the FastAPI backend**
+6. **Start the FastAPI backend**
    ```bash
    uvicorn main:app --reload
    ```
     Available at port 8000
 
-6. **Start the Streamlit frontend** (in a new terminal)
+7. **Start the Streamlit frontend** (in a new terminal)
    ```bash
    streamlit run front_end.py
    ```
