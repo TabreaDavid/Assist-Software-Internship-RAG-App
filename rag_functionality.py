@@ -22,7 +22,7 @@ def get_current_model(db: Session = Depends(get_db)):
 
 def get_llm_instance(db: Session):
     current_model = get_current_model(db)
-    return OpenAI(api_key=os.getenv("OPEN_API_KEY"), model=current_model)
+    return OpenAI(api_key=os.getenv("OPENAI_API_KEY"), model=current_model)
 
 def get_custom_context(db: Session = Depends(get_db)):
     context_setting = db.query(AdminSettings).filter(AdminSettings.setting_key == "custom_context").first()
