@@ -3,6 +3,8 @@
 
 A Retrieval-Augmented Generation web application that provides a Q&A system. Built with FastAPI on the backend and Streamlit frontend.
 
+![App demo](images/app.png)
+
 ### Features
 - User registration and authentication
 - Document uploading and processing
