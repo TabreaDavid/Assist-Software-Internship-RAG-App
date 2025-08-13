@@ -225,6 +225,19 @@ def chat_query(query_data: Query, current_user: User = Depends(get_current_user)
         "sources": result["sources"]
     }
 
+@app.get("/chat-history/{collection_id}")
+def get_chat_history(collection_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    collection = db.query(Collection).filter(Collection.id == collection_id,
+                                             Collection.owner_id == current_user.id).first()
+    
+    if not collection:
+        raise HTTPException(status_code=404, detail="Collection not found")
+    
+    chat_history = db.query(ChatHistory).filter(ChatHistory.collection_id == collection_id,
+                                                ChatHistory.user_id == current_user.id).order_by(ChatHistory.created_at).all()
+    
+    return [{"query": chat.query, "response": chat.response, "created_at": chat.created_at} for chat in chat_history]
+
 @app.post("/admin-settings/change-model")
 def change_model(model_data: ModelChange, db: Session = Depends(get_db)):
     admin_password = os.getenv("ADMIN_PASSWORD")

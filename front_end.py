@@ -19,6 +19,23 @@ if "show_login" not in st.session_state:
 if "messages" not in st.session_state:
     st.session_state["messages"] = []
 
+def load_chat_history(collection_id):
+    """Load chat history for a specific collection"""
+    try:
+        headers = get_headers()
+        response = requests.get(f"{API_URL}/chat-history/{collection_id}", headers=headers)
+        if response.status_code == 200:
+            chat_history = response.json()
+            messages = []
+            for chat in chat_history:
+                messages.append({"role": "user", "content": chat["query"]})
+                messages.append({"role": "assistant", "content": chat["response"]})
+            return messages
+    except Exception as e:
+        st.error(f"Failed to load chat history: {e}")
+    
+    return []
+
 def set_auth(token):
     st.session_state["token"] = token
     st.session_state["authenticated"] = True
@@ -180,26 +197,48 @@ def response_generator(response_text):
         time.sleep(0.05)
     
 if st.session_state["authenticated"]:
-    if prompt := st.chat_input("Ask something"):
-        st.session_state.messages.append({"role": "user", "content": prompt})
+    try:
+        current_collection_id = int(chat_collection_id) if chat_collection_id else None
+    except (ValueError, TypeError):
+        current_collection_id = None
     
-        with st.chat_message("user"):
-            st.markdown(prompt)
-
-        try:
-            collection_id = int(chat_collection_id)
-        except (ValueError, TypeError) as e:
-            collection_id = 1;
-
-        payload = {"collection_id": collection_id, "query": prompt}
-        if query_type == "Simple":
-            endpoint = "simple"
+    if "current_collection" not in st.session_state:
+        st.session_state["current_collection"] = None
+        
+    if current_collection_id and query_type == "Enhanced (Remembers chat history)":
+        if st.session_state["current_collection"] != current_collection_id:
+            st.session_state["current_collection"] = current_collection_id
+            historical_messages = load_chat_history(current_collection_id)
+            st.session_state["messages"] = historical_messages
+    elif current_collection_id is None or query_type == "Simple":
+        if st.session_state.get("current_collection") != "simple":
+            st.session_state["current_collection"] = "simple"
+            st.session_state["messages"] = []
+    
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+    
+    if prompt := st.chat_input("Ask something"):
+        if not current_collection_id:
+            st.error("Please enter a valid Collection ID")
         else:
-            endpoint = "chat"
+            st.session_state.messages.append({"role": "user", "content": prompt})
+        
+            with st.chat_message("user"):
+                st.markdown(prompt)
 
-        resp = requests.post(f"{API_URL}/query/{endpoint}", json=payload, headers=get_headers())
-        if resp.status_code == 200:
-            result = resp.json()
-            with st.chat_message("ai"):
-                response = st.write_stream(response_generator(result["response"]))
-            st.session_state.messages.append({"role": "assistant", "content": result["response"]})
+            payload = {"collection_id": current_collection_id, "query": prompt}
+            if query_type == "Simple":
+                endpoint = "simple"
+            else:
+                endpoint = "chat"
+
+            resp = requests.post(f"{API_URL}/query/{endpoint}", json=payload, headers=get_headers())
+            if resp.status_code == 200:
+                result = resp.json()
+                with st.chat_message("assistant"):
+                    response = st.write_stream(response_generator(result["response"]))
+                st.session_state.messages.append({"role": "assistant", "content": result["response"]})
+            else:
+                st.error("Failed to get response from AI")
