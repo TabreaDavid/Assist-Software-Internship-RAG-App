@@ -31,6 +31,8 @@ def load_chat_history(collection_id):
                 messages.append({"role": "user", "content": chat["query"]})
                 messages.append({"role": "assistant", "content": chat["response"]})
             return messages
+        else:
+            st.error("Failed to load chat history")
     except Exception as e:
         st.error(f"Failed to load chat history: {e}")
     
