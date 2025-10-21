@@ -5,7 +5,7 @@ from schemas import *
 from models import *
 from auth import *
 import os
-from file_processing import *
+from file_processing import FileProcess
 from rag_functionality import *
 from database import Database
 from datetime import datetime
@@ -133,22 +133,13 @@ def upload_document(collection_id: int, file: UploadFile = File(...), current_us
     content = file.file.read()
 
     file_extension = os.path.splitext(file.filename)[1][1:]
+    file_processor = FileProcess(file_extension, content)
 
-    if file_extension == "txt":
-        processed_content = process_txt(content)
-
-    elif file_extension == "pdf":
-        processed_content = process_pdf(content)
-
-    elif file_extension == "xml":
-        processed_content = process_xml(content)
-
-    elif file_extension == "csv":
-        processed_content = process_csv(content)
-
+    if file_extension in file_processor.get_extensions():
+        processed_content = file_processor.process_file()
     else:
         raise HTTPException(status_code=400, detail="File type not supported")
-
+    
     document = Document(
         file_name=file.filename,
         file_type=file_extension,
