@@ -1,8 +1,8 @@
-from passlib.context import CryptContext
+import bcrypt
 import jwt
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from database import get_db
+from database import Database
 from models import User
 from sqlalchemy.orm import Session
 from dotenv import load_dotenv
@@ -12,13 +12,15 @@ import os
 load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY")
 security = HTTPBearer()
-pwd_context = CryptContext(schemes=["bcrypt"])
+database = Database()
 
 def hash_password(password: str):
-    return pwd_context.hash(password)
+    password_bytes = password.encode('utf-8')
+    hashed = bcrypt.hashpw(password_bytes, bcrypt.gensalt())
+    return hashed.decode('utf-8')
 
 def verify_password(hashed_password: str, password: str):
-    return pwd_context.verify(password, hashed_password)
+    return bcrypt.checkpw(password.encode('utf-8'), hashed_password.encode('utf-8'))
 
 def create_access_token(username: str, id: int):
     payload = {
@@ -29,7 +31,7 @@ def create_access_token(username: str, id: int):
 
     return jwt.encode(payload, SECRET_KEY, algorithm="HS256")
 
-def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
+def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(database.get_db)):
     try:
         payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=["HS256"])
         user_id = payload.get("user_id")
