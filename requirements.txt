@@ -3,10 +3,10 @@ uvicorn[standard]
 python-multipart
 sqlalchemy
 psycopg2-binary
-passlib[bcrypt]
+bcrypt
 PyJWT
 python-dotenv
-pandas
+pandas>=2.2.0
 PyPDF2
 chromadb
 llama-index

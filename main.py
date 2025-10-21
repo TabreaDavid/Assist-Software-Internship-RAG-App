@@ -2,22 +2,21 @@ from fastapi import FastAPI, Depends, HTTPException, File, UploadFile
 from sqlalchemy.orm import Session
 from dotenv import load_dotenv
 from schemas import *
-from database import get_db, create_tables
 from models import *
 from auth import *
 import os
 from file_processing import *
 from rag_functionality import *
-from database import DB_Session
+from database import Database
 from datetime import datetime
 from rag_functionality import get_current_model
 
-
 load_dotenv()
 app = FastAPI()
-create_tables()
+database = Database()
+database.create_tables()
 
-db = DB_Session()
+db = database.db_session()
 try:
     load_indexed_collections(db)
     existing_model_setting = db.query(AdminSettings).filter(AdminSettings.setting_key == "openai_model").first()
@@ -29,7 +28,7 @@ finally:
     db.close()
 
 @app.post("/register")
-def register(user_data: UserCreate, db: Session = Depends(get_db)):
+def register(user_data: UserCreate, db: Session = Depends(database.get_db)):
     existing_user = db.query(User).filter(User.name == user_data.name).first()
 
     if existing_user:
@@ -47,7 +46,7 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
     return {"Message": "User created succesfully"}
 
 @app.post("/login")
-def login(user_data: UserLogin, db: Session = Depends(get_db)):
+def login(user_data: UserLogin, db: Session = Depends(database.get_db)):
     user = db.query(User).filter(User.name == user_data.name).first()
 
     if not user or not verify_password(user.password_hash, user_data.password):
@@ -66,17 +65,16 @@ def get_profile(current_user: User = Depends(get_current_user)):
     }
 
 @app.put("/profile")
-def update_profile(new_email: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def update_profile(new_email: str, current_user: User = Depends(get_current_user), db: Session = Depends(database.get_db)):
     current_user.email = new_email
     db.commit()
     return {"message": "Profile updated successfully"}
 
 @app.post("/collections")
-def create_collection(collection_data: CollectionCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def create_collection(collection_data: CollectionCreate, current_user: User = Depends(get_current_user), db: Session = Depends(database.get_db)):
     collection = Collection(
         name=collection_data.name,
-        owner_id=current_user.id,
-        owner=current_user
+        owner_id=current_user.id
     )
     db.add(collection)
     db.commit()
@@ -84,12 +82,12 @@ def create_collection(collection_data: CollectionCreate, current_user: User = De
             "message": "Collection created successfully"}
 
 @app.get("/collections/")
-def get_collections(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def get_collections(current_user: User = Depends(get_current_user), db: Session = Depends(database.get_db)):
     collections = db.query(Collection).filter(Collection.owner_id == current_user.id).all()
     return [{"id": c.id, "name": c.name, "created_at": c.created_at} for c in collections]
 
 @app.get("/collections/{collection_id}")
-def get_collection(collection_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def get_collection(collection_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(database.get_db)):
     collection = db.query(Collection).filter(Collection.owner_id == current_user.id,
                                              Collection.id == collection_id).first()
     if not collection:
@@ -105,7 +103,7 @@ def get_collection(collection_id: int, current_user: User = Depends(get_current_
     }
 
 @app.delete("/collections/{collection_id}")
-def remove_collection(collection_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def remove_collection(collection_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(database.get_db)):
     collection = db.query(Collection).filter(Collection.id == collection_id,
                                             Collection.owner_id == current_user.id).first()
 
@@ -125,7 +123,7 @@ def remove_collection(collection_id: int, current_user: User = Depends(get_curre
     return {"message": "Collection deleted successfully"}
 
 @app.post("/documents/upload")
-def upload_document(collection_id: int, file: UploadFile = File(...), current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def upload_document(collection_id: int, file: UploadFile = File(...), current_user: User = Depends(get_current_user), db: Session = Depends(database.get_db)):
 
     collection = db.query(Collection).filter(Collection.id == collection_id, Collection.owner_id == current_user.id).first()
 
@@ -165,7 +163,7 @@ def upload_document(collection_id: int, file: UploadFile = File(...), current_us
     return {"message": "Document uploaded successfully"}
 
 @app.get("/documents/{collection_id}")
-def get_documents(collection_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def get_documents(collection_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(database.get_db)):
     collection = db.query(Collection).filter(Collection.id == collection_id,
                                              Collection.owner_id == current_user.id).first()
 
@@ -176,7 +174,7 @@ def get_documents(collection_id: int, current_user: User = Depends(get_current_u
     return [{"content": d.content, "uploaded_at": d.uploaded_at, "file_name": d.file_name} for d in documents]
 
 @app.post("/query/simple")
-def simple_query(query_data: Query, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def simple_query(query_data: Query, current_user: User = Depends(get_current_user), db: Session = Depends(database.get_db)):
     collection = db.query(Collection).filter(Collection.id == query_data.collection_id,
                                              Collection.owner_id == current_user.id).first()
 
@@ -192,7 +190,7 @@ def simple_query(query_data: Query, current_user: User = Depends(get_current_use
     }
 
 @app.post("/query/chat")
-def chat_query(query_data: Query, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def chat_query(query_data: Query, current_user: User = Depends(get_current_user), db: Session = Depends(database.get_db)):
     collection = db.query(Collection).filter(Collection.id == query_data.collection_id,
                                              Collection.owner_id == current_user.id).first()
     
@@ -226,7 +224,7 @@ def chat_query(query_data: Query, current_user: User = Depends(get_current_user)
     }
 
 @app.get("/chat-history/{collection_id}")
-def get_chat_history(collection_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def get_chat_history(collection_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(database.get_db)):
     collection = db.query(Collection).filter(Collection.id == collection_id,
                                              Collection.owner_id == current_user.id).first()
     
@@ -239,7 +237,7 @@ def get_chat_history(collection_id: int, current_user: User = Depends(get_curren
     return [{"query": chat.query, "response": chat.response, "created_at": chat.created_at} for chat in chat_history]
 
 @app.post("/admin-settings/change-model")
-def change_model(model_data: ModelChange, db: Session = Depends(get_db)):
+def change_model(model_data: ModelChange, db: Session = Depends(database.get_db)):
     admin_password = os.getenv("ADMIN_PASSWORD")
 
     if model_data.admin_password != admin_password:
@@ -259,12 +257,12 @@ def change_model(model_data: ModelChange, db: Session = Depends(get_db)):
     return {"message": f"Model changed to {model_data.model_name} successfully"}
 
 @app.get("/admin-settings/current-model")
-def get_current_model_setting(db: Session = Depends(get_db)):
+def get_current_model_setting(db: Session = Depends(database.get_db)):
     current_model = get_current_model(db)
     return {"current_model": current_model}
 
 @app.post("/admin-settings/set-custom-context")
-def set_custom_context_endpoint(context_data: CustomContextUpdate, db: Session = Depends(get_db)):
+def set_custom_context_endpoint(context_data: CustomContextUpdate, db: Session = Depends(database.get_db)):
     admin_password = os.getenv("ADMIN_PASSWORD")
 
     if not admin_password or context_data.admin_password != admin_password:
@@ -274,7 +272,7 @@ def set_custom_context_endpoint(context_data: CustomContextUpdate, db: Session =
     return {"message": "Custom context updated successfully"}
 
 @app.get("/admin-settings/current-custom-context")
-def get_current_custom_context_setting(db: Session = Depends(get_db)):
+def get_current_custom_context_setting(db: Session = Depends(database.get_db)):
     custom_context = get_custom_context(db)
     return {"custom_context": custom_context}
 
