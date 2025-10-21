@@ -41,12 +41,12 @@ A Retrieval-Augmented Generation web application that provides a Q&A system. Bui
    
    Create a `.env` file in the root directory:
    ```env
-   OPENAI_API_KEY= your open ai key
-   OPENAI_MODEL= your model of choice
+   OPENAI_API_KEY=your_open_ai_key
+   OPENAI_MODEL=your_model_choice
    EMBEDDING_MODEL_NAME= BAAI/bge-small-en-v1.5 #recommended
    CHROMA_PATH=./chroma_db
-   SECRET_KEY= your secret jwt key
-   DATABASE_URL = your database url
+   SECRET_KEY=your_seret_jwt_key
+   DATABASE_URL=your_db_url #(sqlite:///./db/db.sqlite3 - simple sqlite) 
    ```
 
 6. **Start the FastAPI backend**
