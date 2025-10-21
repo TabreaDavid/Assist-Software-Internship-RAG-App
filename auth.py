@@ -19,13 +19,12 @@ def hash_password(password: str):
     hashed = bcrypt.hashpw(password_bytes, bcrypt.gensalt())
     return hashed.decode('utf-8')
 
-def verify_password(hashed_password: str, password: str):
+def verify_password(password: str, hashed_password: str):
     return bcrypt.checkpw(password.encode('utf-8'), hashed_password.encode('utf-8'))
 
-def create_access_token(username: str, id: int):
+def create_access_token(id: int):
     payload = {
         "user_id": id,
-        "username": username,
         "exp": datetime.now(timezone.utc) + timedelta(hours=24)
     }
 
