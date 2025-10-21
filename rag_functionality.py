@@ -1,9 +1,7 @@
-from fastapi import Depends
 from sqlalchemy.orm import Session
 from dotenv import load_dotenv
 from models import Document, IndexedCollection, AdminSettings
 import os, chromadb
-from database import Database
 from datetime import datetime
 from llama_index.vector_stores.chroma import ChromaVectorStore
 from llama_index.core import Document as LDocument, VectorStoreIndex
@@ -15,9 +13,8 @@ load_dotenv()
 embedding_model_name = os.getenv("EMBEDDING_MODEL_NAME")
 embed_model = HuggingFaceEmbedding(model_name=embedding_model_name)
 chroma_path = os.getenv("CHROMA_PATH")
-database = Database()
 
-def get_current_model(db: Session = Depends(database.get_db)):
+def get_current_model(db: Session):
     model_setting = db.query(AdminSettings).filter(AdminSettings.setting_key == "openai_model").first()
     return model_setting.setting_value
 
@@ -25,13 +22,13 @@ def get_llm_instance(db: Session):
     current_model = get_current_model(db)
     return OpenAI(api_key=os.getenv("OPENAI_API_KEY"), model=current_model)
 
-def get_custom_context(db: Session = database.get_db):
+def get_custom_context(db: Session):
     context_setting = db.query(AdminSettings).filter(AdminSettings.setting_key == "custom_context").first()
     if context_setting:
         return context_setting.setting_value
     return None
 
-def set_custom_context(custom_context: str, db: Session = Depends(database.get_db)):
+def set_custom_context(custom_context: str, db: Session):
     context_setting = db.query(AdminSettings).filter(AdminSettings.setting_key == "custom_context").first()
     if context_setting:
         context_setting.setting_value = custom_context
@@ -45,7 +42,7 @@ def set_custom_context(custom_context: str, db: Session = Depends(database.get_d
 chroma_client = chromadb.PersistentClient(path=chroma_path)
 all_collection_id = {}
 
-def index_document(document: Document, db: Session =database.get_db):
+def index_document(document: Document, db: Session):
     collection_id = document.collection_id
     
     text_splitter = SentenceSplitter(chunk_size=512, chunk_overlap=70)
@@ -74,7 +71,7 @@ def index_document(document: Document, db: Session =database.get_db):
     for llama_document in llama_documents:
         all_collection_id[collection_id].insert(llama_document)
 
-def load_indexed_collections(db: Session = Depends(database.get_db)):
+def load_indexed_collections(db: Session):
     indexed_collections = db.query(IndexedCollection).all()
     
     for indexed_collection in indexed_collections:
