@@ -51,12 +51,14 @@ A Retrieval-Augmented Generation web application that provides a Q&A system. Bui
 
 6. **Start the FastAPI backend**
    ```bash
-   uvicorn main:app --reload
+   cd backend
+   fastapi dev main.py 
    ```
     Available at port 8000
 
 7. **Start the Streamlit frontend** (in a new terminal)
    ```bash
+   cd frontend
    streamlit run front_end.py
    ```
    Available at port 8501
